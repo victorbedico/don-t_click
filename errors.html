@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>bedico.com</title>
+    <style>
+        /* --- 1. GLOBAL SETUP --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            height: 100vh; width: 100vw;
+            display: flex; flex-direction: column;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            background-image: url('img6.jpg'); 
+            background-size: cover; background-position: center;
+        }
+
+        .glass-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(18, 18, 17, 0.35); 
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            z-index: -1;
+        }
+
+        /* --- 2. SECTIONS --- */
+        .top-section { flex: 1; display: flex; justify-content: center; align-items: center; padding-top: 20px; }
+        .top-section img { max-width: 60%; max-height: 110px; border-radius: 20px; }
+
+        .slideshow-section { flex: 2; width: 100%; position: relative; overflow: hidden; }
+
+        .controls-section {
+            flex: 1.5; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; gap: 15px; padding-bottom: 20px;
+        }
+
+        /* --- 3. SLIDESHOW --- */
+        .slide-card {
+            position: absolute; width: 80%; height: 85%; top: 7.5%; left: 100%;
+            border-radius: 25px; border: 4px solid #fff;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            overflow: hidden; transition: transform 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+        }
+        .slide-card img { width: 100%; height: 100%; object-fit: cover; }
+        .slide-card.active { transform: translateX(-112.5%); left: 100%; }
+        .slide-card.exit { transform: translateX(-225%); left: 100%; }
+
+        /* --- 4. BUTTONS --- */
+        .btn {
+            width: 80%; max-width: 300px; padding: 16px; border: none;
+            border-radius: 20px; color: white; font-weight: bold;
+            text-transform: uppercase; cursor: pointer; transition: 0.3s;
+        }
+        .music-btn { background: linear-gradient(45deg, #6c5ce7, #a29bfe); }
+        .game-btn { background: linear-gradient(45deg, #fd79a8, #fab1a0); }
+
+        /* --- 5. AESTHETIC GAME OVERLAY --- */
+        #gameOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            /* AESTHETIC GRADIENT BACKGROUND */
+            background: linear-gradient(135deg, #1e272e 0%, #2f3542 100%);
+            display: none; flex-direction: column; align-items: center; z-index: 1000;
+        }
+
+        .game-header {
+            width: 100%; padding: 60px 30px 20px;
+            display: flex; justify-content: space-between;
+            color: white; font-size: 18px; font-weight: 200; letter-spacing: 2px;
+        }
+
+        #starTarget {
+            width: 90px; height: 90px; position: absolute;
+            font-size: 60px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            filter: drop-shadow(0 0 15px rgba(255,255,255,0.3));
+            user-select: none;
+        }
+
+        /* --- 6. POPUP --- */
+        #messageBox {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
+            width: 85%; background: white; padding: 40px 20px; border-radius: 30px;
+            text-align: center; z-index: 2000; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #messageBox.active { transform: translate(-50%, -50%) scale(1); }
+    </style>
+</head>
+<body>
+
+    <div class="glass-overlay"></div>
+
+    <div class="top-section"><img src="ming.gif" alt="GIF"></div>
+
+    <div class="slideshow-section">
+        <div class="slide-card active"><img src="img1.jpg"></div>
+        <div class="slide-card"><img src="img2.jpg"></div>
+        <div class="slide-card"><img src="img3.jpg"></div>
+        <div class="slide-card"><img src="img4.jpg"></div>
+        <div class="slide-card"><img src="img5.jpg"></div>
+    </div>
+
+    <div class="controls-section">
+        <audio id="bgMusic" loop><source src="d4vd.mp3" type="audio/mpeg"></audio>
+        <button class="btn music-btn" id="playBtn">Play Music ▶️</button>
+        <button class="btn game-btn" id="startBtn">Start Game 🎮</button>
+    </div>
+
+    <div id="gameOverlay">
+        <div class="game-header">
+            <div>HITS: <span id="scoreVal" style="color:#fd79a8">0</span></div>
+            <div>TIME: <span id="timeVal" style="color:#74b9ff">15</span></div>
+        </div>
+        <div id="starTarget">⭐</div>
+        <button class="btn" id="quitBtn" style="background:rgba(255,255,255,0.1); position:absolute; bottom:50px; border:1px solid rgba(255,255,255,0.2);">QUIT</button>
+    </div>
+
+    <div id="messageBox">
+        <h2 id="msgTitle" style="margin-bottom:10px;">MISSION PASSED</h2>
+        <p id="msgBody" style="margin-bottom:20px; color:#636e72;">💋 I LOVE YOUU KA SA AKIN 😘!</p>
+        <button class="btn" onclick="closeMsg()" style="background:#2d3436; color:white; width:100%;">BACK TO HOME</button>
+    </div>
+
+    <script>
+        // --- SLIDESHOW ---
+        const slides = document.querySelectorAll('.slide-card');
+        let slideIdx = 0;
+        setInterval(() => {
+            const current = slides[slideIdx];
+            current.classList.remove('active'); current.classList.add('exit');
+            slideIdx = (slideIdx + 1) % slides.length;
+            const next = slides[slideIdx];
+            next.classList.remove('exit'); next.classList.add('active');
+            setTimeout(() => { current.classList.remove('exit'); }, 800);
+        }, 3500);
+
+        // --- MUSIC ---
+        const music = document.getElementById('bgMusic');
+        const playBtn = document.getElementById('playBtn');
+        let isPlaying = false;
+        playBtn.onclick = () => {
+            if (!isPlaying) { music.play(); playBtn.innerText = "Music: Playing ⏸"; }
+            else { music.pause(); playBtn.innerText = "Play Music ▶️"; }
+            isPlaying = !isPlaying;
+        };
+
+        // --- IMPROVED GAME LOGIC ---
+        const gameOverlay = document.getElementById('gameOverlay');
+        const star = document.getElementById('starTarget');
+        const scoreVal = document.getElementById('scoreVal');
+        const timeVal = document.getElementById('timeVal');
+        const msgBox = document.getElementById('messageBox');
+        
+        // Listahan ng Emojis para sa Target
+        const emojis = ['🐍', '💩', '🐉', '🦠', '👻', '🧚🏽', '👹', '🧛🏽'];
+        
+        let score = 0; let timeLeft = 15; let gameTimer;
+
+        document.getElementById('startBtn').onclick = () => {
+            gameOverlay.style.display = 'flex';
+            score = 0; timeLeft = 15;
+            scoreVal.innerText = score;
+            timeVal.innerText = timeLeft;
+            star.innerText = '🧌'; // Reset to star at start
+            moveStar();
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                timeVal.innerText = timeLeft;
+                if (timeLeft <= 0) endGame(false);
+            }, 1000);
+        };
+
+        star.onclick = () => {
+            score++;
+            scoreVal.innerText = score;
+            
+            // PALIT NG EMOJI LOGIC
+            const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+            star.innerText = randomEmoji;
+
+            // Effect pag click
+            star.style.transform = 'scale(1.3)';
+            setTimeout(() => { star.style.transform = 'scale(1)'; }, 100);
+
+            if (score >= 10) endGame(true);
+            else moveStar();
+        };
+
+        function moveStar() {
+            const x = Math.floor(Math.random() * (window.innerWidth - 100)) + 20;
+            const y = Math.floor(Math.random() * (window.innerHeight - 300)) + 150;
+            star.style.left = x + 'px';
+            star.style.top = y + 'px';
+        }
+
+        function endGame(win) {
+            clearInterval(gameTimer);
+            const title = document.getElementById('msgTitle');
+            title.innerText = win ? "YOU WIN! 🎉" : "TIME'S UP! ⏰";
+            title.style.color = win ? "#00b894" : "#d63031";
+            msgBox.classList.add('active');
+        }
+
+        function closeMsg() { msgBox.classList.remove('active'); gameOverlay.style.display = 'none'; }
+        document.getElementById('quitBtn').onclick = () => { clearInterval(gameTimer); gameOverlay.style.display = 'none'; };
+    </script>
+</body>
+</html>
